@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&display=swap" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Generador de Grupos Personalizados</title>
+  <style>
+    body {
+      font-family: 'Lato', sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 20px;
+      background-color: #f4d8f7;
+      border-radius: 10px;
+      color: #824988;
+    }
+
+    h1, h2 {
+      text-align: center;
+    }
+
+    .alumno-lista {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 10px;
+      margin: 20px 0;
+    }
+
+    .grupo {
+      background-color: #fff;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 5px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #824988;
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 5px;
+      margin-top: 10px;
+    }
+
+    button:hover {
+      background-color: #ad6db4;
+    }
+
+    label {
+      display: flex;
+      align-items: center;
+      background: #fff;
+      padding: 8px 10px;
+      border-radius: 5px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+      cursor: pointer;
+    }
+
+    input[type="number"] {
+      padding: 5px;
+      width: 60px;
+      margin-left: 10px;
+    }
+    
+    .label-config {
+      background: transparent;
+      box-shadow: none;
+      padding: 0;
+      cursor: default;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Generador de Grupos Personalizados</h1>
+
+  <h2>Selecciona los alumnos presentes:</h2>
+  <form id="grupoForm">
+    <div class="alumno-lista" id="listaAlumnos"></div>
+
+    <label for="tamGrupo" class="label-config">
+      Número de integrantes por grupo:
+      <input type="number" id="tamGrupo" min="1" value="2" required />
+    </label>
+
+    <button type="submit">Generar Grupos</button>
+  </form>
+
+  <div id="resultado"></div>
+
+  <script>
+    let alumnos = [];
+    const listaContenedor = document.getElementById("listaAlumnos");
+    const resultado = document.getElementById("resultado");
+
+    async function cargarAlumnos() {
+      try {
+        const response = await fetch('alumnos.json');
+        if (response.ok) {
+          alumnos = await response.json();
+          renderizarLista();
+        } else {
+          console.error("No se pudo cargar alumnos.json");
+          resultado.innerHTML = "<p style='color:red'>No se pudo cargar la lista de alumnos. Verifica que estás usando un servidor web local y no abriendo el archivo directamente.</p>";
+        }
+      } catch (error) {
+        console.error("Error al cargar alumnos.json.", error);
+        resultado.innerHTML = "<p style='color:red'>Error al cargar la lista de alumnos. Verifica que estás usando un servidor web local (ej. Live Server) y no abriendo el archivo directamente.</p>";
+      }
+    }
+
+    function renderizarLista() {
+      listaContenedor.innerHTML = "";
+      alumnos.forEach((nombre) => {
+        const label = document.createElement("label");
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.name = "alumno";
+        checkbox.value = nombre;
+        // Por defecto todos checkeados al cargar para facilitar
+        checkbox.checked = true;
+        
+        // Agregar un pequeño margen al checkbox para que no quede pegado al texto
+        checkbox.style.marginRight = "10px";
+        
+        label.appendChild(checkbox);
+        label.append(nombre);
+        listaContenedor.appendChild(label);
+      });
+    }
+
+    // Manejar generación de grupos
+    document.getElementById("grupoForm").addEventListener("submit", function(e) {
+      e.preventDefault();
+      resultado.innerHTML = "";
+
+      const seleccionados = Array.from(document.querySelectorAll('input[name="alumno"]:checked')).map(el => el.value);
+      const tamGrupo = parseInt(document.getElementById("tamGrupo").value);
+
+      if (seleccionados.length < 1 || isNaN(tamGrupo) || tamGrupo < 1) {
+        alert("Selecciona al menos un alumno y un tamaño válido de grupo.");
+        return;
+      }
+
+      // Mezclar los alumnos seleccionados
+      for (let i = seleccionados.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [seleccionados[i], seleccionados[j]] = [seleccionados[j], seleccionados[i]];
+      }
+
+      // Dividir en grupos
+      const grupos = [];
+      for (let i = 0; i < seleccionados.length; i += tamGrupo) {
+        grupos.push(seleccionados.slice(i, i + tamGrupo));
+      }
+
+      resultado.innerHTML = "<h2>Grupos Generados</h2>";
+      grupos.forEach((grupo, idx) => {
+        resultado.innerHTML += `<div class="grupo"><strong>Grupo ${idx + 1}:</strong> ${grupo.join(", ")}</div>`;
+      });
+    });
+
+    // Carga inicial
+    cargarAlumnos();
+  </script>
+
+</body>
+</html>
